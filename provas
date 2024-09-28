@@ -1,0 +1,66 @@
+import PyPDF2
+import nltk
+from collections import Counter
+from gensim import corpora
+import streamlit as st
+import re
+
+# Baixar recursos do NLTK
+nltk.download('punkt')
+
+# Função para ler PDF
+def read_pdf(file_path):
+    text = ''
+    with open(file_path, 'rb') as file:
+        reader = PyPDF2.PdfReader(file)
+        for page in reader.pages:
+            text += page.extract_text() + ' '
+    return text
+
+# Função para processar texto
+def preprocess_text(text):
+    # Limpeza básica
+    text = text.lower()  # Converter para minúsculas
+    text = re.sub(r'[^a-zA-Z0-9\s]', '', text)  # Remover pontuação
+    tokens = nltk.word_tokenize(text)  # Tokenização
+    return tokens
+
+# Função para gerar resumo
+def summarize_text(tokens):
+    word_counts = Counter(tokens)  # Contar palavras
+    most_common_words = word_counts.most_common(10)  # 10 palavras mais comuns
+    return most_common_words
+
+# Função para análise de tópicos
+def topic_analysis(tokens):
+    dictionary = corpora.Dictionary([tokens])
+    corpus = [dictionary.doc2bow(token) for token in [tokens]]
+    return dictionary, corpus
+
+# Aplicação Streamlit
+def main():
+    st.title("Análise de PDFs de Questões e Resumos")
+    
+    uploaded_file = st.file_uploader("Carregue seu arquivo PDF", type="pdf")
+    
+    if uploaded_file is not None:
+        # Ler e processar PDF
+        pdf_text = read_pdf(uploaded_file)
+        tokens = preprocess_text(pdf_text)
+
+        # Gerar resumo
+        summary = summarize_text(tokens)
+        
+        # Exibir resumo
+        st.subheader("Resumo das Palavras Mais Comuns:")
+        st.write(summary)
+
+        # Análise de tópicos
+        dictionary, corpus = topic_analysis(tokens)
+        st.subheader("Dicionário de Tópicos:")
+        st.write(dictionary.token2id)
+        st.subheader("Corpo do Documento:")
+        st.write(corpus)
+
+if __name__ == "__main__":
+    main()
